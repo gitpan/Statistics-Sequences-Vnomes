@@ -1,0 +1,12 @@
+Revision history for Statistics-Sequences-Vnomes-0.10
+
+0.10    June 2013
+        Integrated with Statistics::Data via Statistics::Sequences
+        Methods for observed(), expected(), etc., as in other Statistics::Sequences sub-modules
+        No croak if only 1 event in sequence.
+        Not compatible with previous versions 0.01-0.05.
+
+0.01	Tue Nov  6  1:45:43 2012
+
+        First version, released on an unsuspecting world.
+
