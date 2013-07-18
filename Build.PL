@@ -27,7 +27,7 @@ my $builder = Module::Build->new(
         'Statistics::Zed' => '0.072',
         'Statistics::Sequences' => '0.11',
     },
-    add_to_cleanup      => [ 'Statistics-Sequences-Vnomes-0.10-*' ],
+    add_to_cleanup      => [ 'Statistics-Sequences-Vnomes-0.11-*' ],
     create_makefile_pl => 'traditional',
 );
 

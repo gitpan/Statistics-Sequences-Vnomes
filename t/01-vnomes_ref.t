@@ -1,9 +1,9 @@
 use strict;
 use warnings;
-use Test::More tests => 11;
+use Test::More tests => 22;
 use constant EPS => 1e-3;
 
-# Tests output of the module by comparing it to published examples of these tests in Tart (197x), Gatlin (1979) and Rushkin et al. (2001) (from NIST) - see the POD for citation:
+# Tests output of the module by comparing it to published examples of these tests in Tart (197x), Gatlin (1979) and Rushkin et al. (2001) (from rukhin_delta_2) - see the POD for citation:
 
 BEGIN { use_ok('Statistics::Sequences::Vnomes') };
 
@@ -20,9 +20,15 @@ my %refdat = (
         data => [2, 1, 2, 0, 1, 2, 1, 1, 1, 0, 1, 0, 1, 2, 1, 2, 0, 2, 2, 1],
         states => [0, 1, 2],
     },
-    nist => {
+    rukhin_delta_2 => {
         psisq => 0.8,
         p_value => 0.67032,
+        data => [qw/0 0 1 1 0 1 1 1 0 1/],
+        states => [0, 1],
+    },
+    rukhin_delta_1 => {
+        psisq => 1.6,
+        p_value => 0.808792,
         data => [qw/0 0 1 1 0 1 1 1 0 1/],
         states => [0, 1],
     },
@@ -40,14 +46,12 @@ my $val;
 eval { $seq->load($refdat{'tart'}->{'data'});};
 ok(!$@, $@);
 
-$val = $seq->observed_mean(length => 2, delta => 0, circularize => 0, states => $refdat{'tart'}->{'states'});
-ok(equal($val, $refdat{'tart'}->{'observed_mean'}), "observed_mean()  $val = $refdat{'tart'}->{'observed_mean'}");
-
 my @freq = $seq->observed(length => 2, delta => 0, circularize => 0, states => $refdat{'tart'}->{'states'});
 my $sum = sum(@freq);
 ok(equal($sum, $refdat{'tart'}->{'observed_sum'}), "observed sum of frequences:  $sum = $refdat{'tart'}->{'observed_sum'}");
 
-#ok(equal($val, $refdat{'tart'}->{'chisq'}), "psisq $val = $refdat{'tart'}->{'chisq'}");
+$val = $seq->psisq(length => 2, delta => 0, circularize => 0, states => [0, 1, 2]);
+ok(equal($val, $refdat{'tart'}->{'chisq'}), "psisq $val = $refdat{'tart'}->{'chisq'}");
    
 # Gatlin data:
 eval { $seq->load($refdat{'gatlin'}->{'data'});};
@@ -56,18 +60,75 @@ ok(!$@, $@);
 $val = $seq->psisq(length => 3, delta => 2, circularize => 1, states => $refdat{'gatlin'}->{'states'}, precision_s => 3);
 ok(equal($val, $refdat{'gatlin'}->{'psisq'}), "psisq  $val = $refdat{'gatlin'}->{'psisq'}");
 
-$val = $seq->p_value(length => 3, delta => 2, circularize => 1, states => $refdat{'gatlin'}->{'states'}, precision_s => 3);
+$val = $seq->p_value(length => 3, delta => 2, circularize => 1, states => $refdat{'gatlin'}->{'states'}, precision_s => 3, tails => 2);
 ok(equal($val, $refdat{'gatlin'}->{'p_value'}), "p_value $val = $refdat{'gatlin'}->{'p_value'}");
 
-# NIST data:
-eval { $seq->load($refdat{'nist'}->{'data'});};
+# Rukhin (2006) data:
+eval { $seq->load($refdat{'rukhin_delta_2'}->{'data'});};
 ok(!$@, $@);
 
-$val = $seq->psisq(length => 3, delta => 2, states => $refdat{'nist'}->{'states'}, precision_s => 3);
-ok(equal($val, $refdat{'nist'}->{'psisq'}), "psisq  $val = $refdat{'nist'}->{'psisq'}");
+# Test observed()
+my $e_obs; # Rukhin et al.'s reported value
+my $href = $seq->observed(length => 3, circularize => 1);
 
-$val = $seq->p_value(length => 3, delta => 2, states => $refdat{'nist'}->{'states'}, precision_s => 3);
-ok(equal($val, $refdat{'nist'}->{'p_value'}), "p_value $val = $refdat{'nist'}->{'p_value'}");
+# 000
+$e_obs = 0; # for r = 000
+$val = delete $href->{'000'};
+ok(equal($val, $e_obs), "observed() for r = 000 = $val; expected = $e_obs");
+
+# 001
+$e_obs = 1;
+$val = delete $href->{'001'};
+ok(equal($val, $e_obs), "observed() for r = 001 = $val; expected = $e_obs");
+
+# 010
+$e_obs = 1;
+$val = delete $href->{'010'};
+ok(equal($val, $e_obs), "observed() for r = 010 = $val; expected = $e_obs");
+
+# 011
+$e_obs = 2;
+$val = delete $href->{'011'};
+ok(equal($val, $e_obs), "observed() for r = 011 = $val; expected = $e_obs");
+
+# 100
+$e_obs = 1;
+$val = delete $href->{'100'};
+ok(equal($val, $e_obs), "observed() for r = 100 = $val; expected = $e_obs");
+
+# 110
+$e_obs = 2;
+$val = delete $href->{'110'};
+ok(equal($val, $e_obs), "observed() for r = 110 = $val; expected = $e_obs");
+
+# 101
+$e_obs = 2;
+$val = delete $href->{'101'};
+ok(equal($val, $e_obs), "observed() for r = 101 = $val; expected = $e_obs");
+
+# 111
+$e_obs = 1; # misprinted as 0 in Rukhin
+$val = delete $href->{'111'};
+ok(equal($val, $e_obs), "observed() for r = 111 = $val; expected = $e_obs");
+
+# this should account for all the possible v-nomes:
+$val = keys %$href;
+ok(equal(0, $val), "vnomes remaining = $val; expected = 0");
+
+# psisq with 2nd backward differencing:
+$val = $seq->psisq(length => 3, delta => 2, states => $refdat{'rukhin_delta_2'}->{'states'}, precision_s => 3, circularize => 1);
+ok(equal($val, $refdat{'rukhin_delta_2'}->{'psisq'}), "psisq  $val = $refdat{'rukhin_delta_2'}->{'psisq'}");
+
+$val = $seq->p_value(length => 3, delta => 2, states => $refdat{'rukhin_delta_2'}->{'states'}, precision_s => 3, tails => 2, circularize => 1);
+ok(equal($val, $refdat{'rukhin_delta_2'}->{'p_value'}), "p_value $val = $refdat{'rukhin_delta_2'}->{'p_value'}");
+
+# psisq with 1st backward differencing:
+$val = $seq->psisq(length => 3, delta => 1, states => $refdat{'rukhin_delta_1'}->{'states'}, precision_s => 3, circularize => 1);
+ok(equal($val, $refdat{'rukhin_delta_1'}->{'psisq'}), "psisq  $val = $refdat{'rukhin_delta_1'}->{'psisq'}");
+
+$val = $seq->p_value(length => 3, delta => 1, states => $refdat{'rukhin_delta_1'}->{'states'}, precision_s => 3, tails => 2, circularize => 1);
+ok(equal($val, $refdat{'rukhin_delta_1'}->{'p_value'}), "p_value $val = $refdat{'rukhin_delta_1'}->{'p_value'}");
+
 
 sub equal {
     return 1 if $_[0] + EPS > $_[1] and $_[0] - EPS < $_[1];

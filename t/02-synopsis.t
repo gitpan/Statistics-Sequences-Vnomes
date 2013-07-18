@@ -1,10 +1,10 @@
 use strict;
 use warnings;
-use Test::More tests => 24;
+use Test::More tests => 23;
 use constant EPS => 1e-3;
 
 # Tests that the POD synopsis example outputs what it says it does, testing most methods in the process:
-use Statistics::Sequences::Vnomes;
+use Statistics::Sequences::Vnomes 0.11;
 my $vnomes = Statistics::Sequences::Vnomes->new();
 isa_ok($vnomes, 'Statistics::Sequences::Vnomes');
 
@@ -23,8 +23,7 @@ while (my($key, $val) = each %$freq_href) {
     ok(equal($val, $test_freq{$key}), "frequency for $key: returned = $val, expected = $test_freq{$key}");
 }
 
-my $val = $vnomes->observed_mean(length => 3, states => [0, 1]); # mean observed frequencies (2.5); also get their SD by 'wanting' an array
-ok(equal($val, 2.5), "observed_mean: returned = $val, expected = 2.5");
+my $val;
 
 $val = $vnomes->expected(length => 3, states => [0, 1]); # mean chance expectation for the frequencies (2.5)
 ok(equal($val, 2.5), "expected() mean: returned = $val, expected = 2.5");
@@ -38,8 +37,8 @@ ok(equal($val, 0.0913), "psisq p-value: returned = $val, expected = 0.0913");
 $val = $vnomes->z_value(length => 3, tails => 1, ccorr => 1); # inverse-phi of the 1-tailed p-value (1.333)
 ok(equal($val, 1.333), "psisq p-value inverted to z-value: returned = $val, expected = 1.333");
 
-my %test_vals = (p_value => 0.0913, observed_mean => 2.5);
-my $stats_href = $vnomes->stats_hash(length => 3, values => {observed_mean => 1, p_value => 1}, tails => 1); # include any stat-method (& their options)
+my %test_vals = (psisq => 3.4, p_value => 0.0913);
+my $stats_href = $vnomes->stats_hash(length => 3, values => {psisq => 1, p_value => 1}, tails => 1); # include any stat-method (& their options)
 while (my($key, $val) = each %$stats_href) {
     ok(equal($val, $test_vals{$key}), "stats_hash() method for $key: returned = $val, expected = $test_vals{$key}");
 }
